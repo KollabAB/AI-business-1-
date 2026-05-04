@@ -9,10 +9,19 @@ import { KnowledgeOS } from '../components/modules/KnowledgeOS';
 import { SentimentShield } from '../components/modules/SentimentShield';
 import { ApiDashboard } from '../components/dashboard/ApiDashboard';
 import { Documentation } from '../components/dashboard/Documentation';
+import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 export const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('lead-hunter');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/auth');
+  };
 
   const menuItems = [
     { id: 'lead-hunter', name: 'Lead-Hunter', icon: Target, category: 'Modules' },
@@ -99,6 +108,7 @@ export const Dashboard = () => {
       <div className="p-4 border-t border-white/10">
         <motion.button 
           whileHover={{ backgroundColor: 'rgba(248, 113, 113, 0.1)' }}
+          onClick={handleLogout}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 transition-all"
         >
           <LogOut size={20} />
@@ -166,13 +176,17 @@ export const Dashboard = () => {
             </button>
             <div className="flex items-center gap-3 border-l border-white/10 pl-4 md:pl-6">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold">Alex Rivera</p>
+                <p className="text-sm font-bold truncate max-w-[120px]">
+                  {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
+                </p>
                 <p className="text-[10px] text-primary font-bold uppercase tracking-wider">Pro Account</p>
               </div>
               <motion.div 
                 whileHover={{ scale: 1.05 }}
-                className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-indigo-600 border border-white/20 shadow-lg shadow-primary/20 cursor-pointer" 
-              />
+                className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-indigo-600 border border-white/20 shadow-lg shadow-primary/20 cursor-pointer flex items-center justify-center font-bold text-white uppercase"
+              >
+                {user?.email?.charAt(0) || 'U'}
+              </motion.div>
             </div>
           </div>
         </header>

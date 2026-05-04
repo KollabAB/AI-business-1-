@@ -4,6 +4,7 @@ import { Check } from 'lucide-react';
 import { Button } from './ui/Button';
 import { CheckoutModal } from './dashboard/CheckoutModal';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 const plans = [
   {
@@ -36,12 +37,19 @@ const plans = [
 export const Pricing = () => {
   const [selectedPlan, setSelectedPlan] = useState<typeof plans[0] | null>(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const handlePlanClick = (plan: typeof plans[0]) => {
     if (plan.price === 'Custom') {
       window.location.href = 'mailto:sales@nexus-modules.ai';
       return;
     }
+
+    if (!user) {
+      navigate('/auth', { state: { from: { pathname: '/dashboard' } } });
+      return;
+    }
+
     setSelectedPlan(plan);
   };
 
@@ -50,7 +58,7 @@ export const Pricing = () => {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold mb-4">Simple, Transparent Pricing</h2>
-          <p className="text-gray-400 max-w-xl mx-auto">
+          <p className="text-gray-400 max-w-xl mx-auto font-medium">
             Choose the plan that fits your current needs and scale as you grow.
           </p>
         </div>
@@ -66,24 +74,24 @@ export const Pricing = () => {
               className={`glass-card relative flex flex-col ${plan.popular ? 'border-primary shadow-2xl shadow-primary/10 scale-105 z-10' : ''}`}
             >
               {plan.popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-primary rounded-full text-xs font-bold uppercase tracking-wider">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-primary rounded-full text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-primary/20">
                   Most Popular
                 </div>
               )}
 
               <div className="mb-8">
-                <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+                <h3 className="text-xl font-bold mb-2 text-white">{plan.name}</h3>
                 <div className="flex items-baseline gap-1 mb-4">
-                  <span className="text-4xl font-bold">{plan.price}</span>
-                  {plan.price !== 'Custom' && <span className="text-gray-400">/mo</span>}
+                  <span className="text-4xl font-bold text-white">{plan.price}</span>
+                  {plan.price !== 'Custom' && <span className="text-gray-400 font-medium">/mo</span>}
                 </div>
-                <p className="text-gray-400 text-sm">{plan.description}</p>
+                <p className="text-gray-400 text-sm font-medium">{plan.description}</p>
               </div>
 
               <div className="space-y-4 mb-10 flex-grow">
                 {plan.features.map((feature) => (
-                  <div key={feature} className="flex items-center gap-3 text-sm">
-                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center">
+                  <div key={feature} className="flex items-center gap-3 text-sm text-gray-300 font-medium">
+                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                       <Check size={14} className="text-primary" />
                     </div>
                     {feature}
@@ -93,7 +101,7 @@ export const Pricing = () => {
 
               <Button 
                 variant={plan.variant} 
-                className="w-full"
+                className="w-full font-bold h-12"
                 onClick={() => handlePlanClick(plan)}
               >
                 {plan.buttonText}
