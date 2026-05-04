@@ -11,6 +11,7 @@ import { ApiDashboard } from '../components/dashboard/ApiDashboard';
 import { Documentation } from '../components/dashboard/Documentation';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { ProfileSettings } from './ProfileSettings';
 
 export const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('lead-hunter');
@@ -29,6 +30,7 @@ export const Dashboard = () => {
     { id: 'sentiment-shield', name: 'Sentiment-Shield', icon: ShieldCheck, category: 'Modules' },
     { id: 'api-dashboard', name: 'API Usage', icon: Zap, category: 'System' },
     { id: 'documentation', name: 'Docs', icon: FileCode, category: 'System' },
+    { id: 'settings', name: 'Settings', icon: Settings, category: 'System' },
   ];
 
   const modules = menuItems.filter(i => i.category === 'Modules');
@@ -41,7 +43,7 @@ export const Dashboard = () => {
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
             <LayoutDashboard size={18} className="text-white" />
           </div>
-          <span className="font-bold text-xl tracking-tight">Nexus <span className="text-primary text-sm uppercase">Modules</span></span>
+          <span className="font-bold text-xl tracking-tight text-white">Nexus <span className="text-primary text-sm uppercase">Modules</span></span>
         </div>
       </div>
 
@@ -93,14 +95,6 @@ export const Dashboard = () => {
                 <span className="font-medium">{item.name}</span>
               </motion.button>
             ))}
-            <motion.button 
-              whileHover={{ x: 4 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-white/5 hover:text-white transition-all"
-            >
-              <Settings size={20} />
-              <span className="font-medium">Settings</span>
-            </motion.button>
           </div>
         </div>
       </nav>
@@ -176,13 +170,14 @@ export const Dashboard = () => {
             </button>
             <div className="flex items-center gap-3 border-l border-white/10 pl-4 md:pl-6">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold truncate max-w-[120px]">
+                <p className="text-sm font-bold truncate max-w-[120px] text-white">
                   {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
                 </p>
                 <p className="text-[10px] text-primary font-bold uppercase tracking-wider">Pro Account</p>
               </div>
               <motion.div 
                 whileHover={{ scale: 1.05 }}
+                onClick={() => setActiveTab('settings')}
                 className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-indigo-600 border border-white/20 shadow-lg shadow-primary/20 cursor-pointer flex items-center justify-center font-bold text-white uppercase"
               >
                 {user?.email?.charAt(0) || 'U'}
@@ -215,6 +210,7 @@ export const Dashboard = () => {
                   {activeTab === 'sentiment-shield' && <SentimentShield />}
                   {activeTab === 'api-dashboard' && <ApiDashboard />}
                   {activeTab === 'documentation' && <Documentation />}
+                  {activeTab === 'settings' && <ProfileSettings />}
                 </div>
               </motion.div>
             </AnimatePresence>

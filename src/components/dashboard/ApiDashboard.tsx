@@ -1,34 +1,94 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Copy, Check, Key, BarChart3, TrendingUp, Zap } from 'lucide-react';
+import { Copy, Check, Key, BarChart3, TrendingUp, Zap, RefreshCw } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { Button } from '../ui/Button';
-
-const usageData = [
-  { name: 'Mon', calls: 450 },
-  { name: 'Tue', calls: 620 },
-  { name: 'Wed', calls: 890 },
-  { name: 'Thu', calls: 540 },
-  { name: 'Fri', calls: 1200 },
-  { name: 'Sat', calls: 350 },
-  { name: 'Sun', calls: 280 },
-];
-
-const moduleUsage = [
-  { name: 'Lead-Hunter', value: 45 },
-  { name: 'Knowledge-OS', value: 30 },
-  { name: 'Sentiment-Shield', value: 25 },
-];
+import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
 
 export const ApiDashboard = () => {
-  const [apiKey] = useState('nx_prod_51hG92jKzX2mP90qL18vY3bT7r5w');
+  const { user, profile, refreshProfile } = useAuth();
   const [copied, setCopied] = useState(false);
+  const [isRotating, setIsRotating] = useState(false);
+  const [usageStats, setUsageStats] = useState<any[]>([]);
+  const [moduleDistribution, setModuleDistribution] = useState<any[]>([]);
+  const [totalCalls, setTotalCalls] = useState(0);
 
   const copyKey = () => {
-    navigator.clipboard.writeText(apiKey);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (profile?.api_key) {
+      navigator.clipboard.writeText(profile.api_key);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
+
+  const rotateKey = async () => {
+    if (!user) return;
+    setIsRotating(true);
+    const newKey = 'nk_' + Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({ api_key: newKey })
+      .eq('id', user.id);
+
+    if (!error) {
+      await refreshProfile();
+    }
+    setIsRotating(false);
+  };
+
+  useEffect(() => {
+    const fetchUsageData = async () => {
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('module_usage')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true });
+
+      if (data && !error) {
+        setTotalCalls(data.length);
+
+        // Process Daily Usage (Last 7 days)
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const last7Days = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date();
+          d.setDate(d.getDate() - (6 - i));
+          return {
+            name: days[d.getDay()],
+            fullDate: d.toISOString().split('T')[0],
+            calls: 0
+          };
+        });
+
+        data.forEach(item => {
+          const itemDate = new Date(item.created_at).toISOString().split('T')[0];
+          const dayEntry = last7Days.find(d => d.fullDate === itemDate);
+          if (dayEntry) {
+            dayEntry.calls++;
+          }
+        });
+        setUsageStats(last7Days);
+
+        // Process Module Distribution
+        const distribution = [
+          { name: 'Lead-Hunter', value: 0 },
+          { name: 'Knowledge-OS', value: 0 },
+          { name: 'Sentiment-Shield', value: 0 },
+        ];
+
+        data.forEach(item => {
+          const mod = distribution.find(m => m.name.toLowerCase() === item.module_name.toLowerCase());
+          if (mod) mod.value++;
+        });
+        setModuleDistribution(distribution);
+      }
+    };
+
+    fetchUsageData();
+  }, [user]);
 
   return (
     <div className="space-y-8">
@@ -52,15 +112,23 @@ export const ApiDashboard = () => {
 
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-grow bg-black/40 border border-white/10 rounded-xl px-4 py-3 font-mono text-primary flex items-center justify-between group">
-              <span className="truncate">{apiKey}</span>
+              <span className="truncate">{profile?.api_key || 'Loading API Key...'}</span>
               <button 
                 onClick={copyKey}
-                className="ml-4 p-2 hover:bg-white/5 rounded-lg transition-colors text-gray-400 hover:text-white"
+                disabled={!profile?.api_key}
+                className="ml-4 p-2 hover:bg-white/5 rounded-lg transition-colors text-gray-400 hover:text-white disabled:opacity-50"
               >
                 {copied ? <Check size={18} className="text-green-500" /> : <Copy size={18} />}
               </button>
             </div>
-            <Button variant="secondary" className="sm:w-32">Rotate Key</Button>
+            <Button 
+              variant="secondary" 
+              className="sm:w-32" 
+              onClick={rotateKey}
+              disabled={isRotating}
+            >
+              {isRotating ? <RefreshCw className="animate-spin mr-2" size={16} /> : 'Rotate Key'}
+            </Button>
           </div>
         </div>
       </div>
@@ -68,9 +136,9 @@ export const ApiDashboard = () => {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
-          { label: 'Total API Calls', value: '12,842', change: '+12%', icon: BarChart3 },
-          { label: 'Avg. Latency', value: '142ms', change: '-5ms', icon: Zap },
-          { label: 'Success Rate', value: '99.9%', change: 'Stable', icon: TrendingUp },
+          { label: 'Total API Calls', value: totalCalls.toLocaleString(), change: '+0%', icon: BarChart3 },
+          { label: 'Avg. Latency', value: '142ms', change: 'Stable', icon: Zap },
+          { label: 'Success Rate', value: '100%', change: 'Stable', icon: TrendingUp },
         ].map((stat, i) => (
           <motion.div
             key={i}
@@ -102,7 +170,7 @@ export const ApiDashboard = () => {
           <h3 className="text-lg font-bold mb-8">API Usage (Last 7 Days)</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={usageData}>
+              <AreaChart data={usageStats}>
                 <defs>
                   <linearGradient id="colorCalls" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#0070f3" stopOpacity={0.3}/>
@@ -143,7 +211,7 @@ export const ApiDashboard = () => {
           <h3 className="text-lg font-bold mb-8">Usage by Module</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={moduleUsage} layout="vertical" margin={{ left: 40 }}>
+              <BarChart data={moduleDistribution} layout="vertical" margin={{ left: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
                 <XAxis type="number" hide />
                 <YAxis 

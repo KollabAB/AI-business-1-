@@ -5,8 +5,11 @@ import {
   ToggleLeft, ToggleRight, Check, Copy, Activity, Target, Bot, ThumbsUp 
 } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
 
 export const SentimentShield = () => {
+  const { user } = useAuth();
   const [review, setReview] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<any>(null);
@@ -18,9 +21,16 @@ export const SentimentShield = () => {
   const [copied, setCopied] = useState(false);
 
   const handleAnalyze = () => {
-    if (!review.trim()) return;
+    if (!review.trim() || !user) return;
     setIsAnalyzing(true);
     setAnalysis(null);
+
+    // Record Usage
+    supabase.from('module_usage').insert({
+      user_id: user.id,
+      module_name: 'sentiment-shield',
+      metadata: { review_length: review.length }
+    }).then();
 
     // Simulate AI Analysis
     setTimeout(() => {

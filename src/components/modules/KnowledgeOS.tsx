@@ -2,8 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Upload, Send, Bot, User, Check, Copy, X, Database, Info } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
 
 export const KnowledgeOS = () => {
+  const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isUploaded, setIsUploaded] = useState(false);
@@ -17,8 +20,23 @@ export const KnowledgeOS = () => {
   }, [messages]);
 
   const handleUpload = () => {
-    if (!file) return;
+    if (!file || !user) return;
     setIsUploading(true);
+    
+    // Record Usage and Store Metadata
+    supabase.from('module_usage').insert({
+      user_id: user.id,
+      module_name: 'knowledge-os',
+      metadata: { filename: file.name, size: file.size }
+    }).then();
+
+    supabase.from('documents').insert({
+      user_id: user.id,
+      name: file.name,
+      file_path: `uploads/${user.id}/${Date.now()}_${file.name}`,
+      content_preview: `Simulated indexing for ${file.name}`
+    }).then();
+
     setTimeout(() => {
       setIsUploading(false);
       setIsUploaded(true);
@@ -29,10 +47,17 @@ export const KnowledgeOS = () => {
   };
 
   const handleSendMessage = () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !user) return;
     const userMessage = input;
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+
+    // Record Usage for each query
+    supabase.from('module_usage').insert({
+      user_id: user.id,
+      module_name: 'knowledge-os',
+      metadata: { type: 'query', query_length: userMessage.length }
+    }).then();
 
     // Simulate AI Response
     setTimeout(() => {

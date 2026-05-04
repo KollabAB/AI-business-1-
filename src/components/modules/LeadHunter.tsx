@@ -2,29 +2,51 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Copy, Check, Globe, Users, Code, Award, Loader2, Sparkles, Building2, Zap, ShieldCheck } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
 
 export const LeadHunter = () => {
+  const { user } = useAuth();
   const [domain, setDomain] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [copied, setCopied] = useState(false);
 
-  const handleSearch = () => {
-    if (!domain) return;
+  const handleSearch = async () => {
+    if (!domain || !user) return;
     setIsAnalyzing(true);
     setResult(null);
     
+    // Record Usage in background
+    supabase.from('module_usage').insert({
+      user_id: user.id,
+      module_name: 'lead-hunter',
+      metadata: { domain }
+    }).then();
+
     // Simulate AI Analysis
-    setTimeout(() => {
-      setResult({
+    setTimeout(async () => {
+      const mockResult = {
         domain,
         companySize: '500-1000 employees',
         techStack: ['React', 'Node.js', 'Salesforce', 'AWS', 'Tailwind'],
         salesScore: 85,
         location: 'San Francisco, CA',
         industry: 'Software as a Service'
-      });
+      };
+      
+      setResult(mockResult);
       setIsAnalyzing(false);
+
+      // Persist Lead
+      await supabase.from('leads').insert({
+        user_id: user.id,
+        domain,
+        company_name: mockResult.industry,
+        size: mockResult.companySize,
+        tech_stack: mockResult.techStack,
+        score: mockResult.salesScore
+      });
     }, 2000);
   };
 
@@ -139,7 +161,7 @@ export const LeadHunter = () => {
                   </div>
                 </div>
               </motion.div>
-
+              
               <motion.div 
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -191,7 +213,7 @@ export const LeadHunter = () => {
                 <div className="relative">
                   <div className="absolute top-0 right-0 p-2 text-[8px] font-bold text-gray-600 uppercase tracking-widest">CURL</div>
                   <pre className="text-[11px] leading-relaxed text-gray-400 bg-black/60 p-6 rounded-2xl border border-white/5 overflow-x-auto custom-scrollbar font-mono">
-                    <code>{`curl -X POST https://api.nexus.modules.ai/v1/lead-hunter \\
+                    <code>{`curl -X POST https://api.nexus-modules.ai/v1/lead-hunter \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -d "domain=${result.domain}"`}</code>
                   </pre>
